@@ -1,90 +1,130 @@
 # str2go
 
-A powerful Go library and CLI tool for converting strings to any Go type with support for basic types, complex structures, slices, and maps.
+A Go library for converting strings to various Go types with a flexible type registry system. This library provides a clean, extensible architecture for string-to-type conversion with support for basic types, pointer types, and custom converters.
 
 ## Features
 
-- **Basic Type Conversion**: Convert strings to int, float, bool, time.Time, etc.
-- **Complex Type Support**: Convert strings to structs, slices, maps
-- **Flexible Input Formats**: Support for JSON, YAML, and custom formats
-- **CLI Interface**: Command-line tool for quick conversions
-- **Web API**: RESTful API for programmatic access
-- **Extensible**: Easy to add custom type converters
-- **Comprehensive Testing**: Full test coverage
+- **Type Registry System**: Flexible registry for managing type converters
+- **Basic Type Support**: Convert strings to int, uint, float, bool, string, time.Time
+- **Pointer Type Support**: Convert strings to pointer types (*int, *bool, etc.)
+- **Extensible Architecture**: Easy to add custom type converters
+- **Thread-Safe**: Concurrent access to converters and registries
+- **Comprehensive Testing**: Full test coverage with benchmarks
+
+## Architecture
+
+The library is organized into several key packages:
+
+- **`converter/`**: Contains individual type converters and a global converter map
+- **`typeregistry/`**: Provides a flexible type registry system
+- **`globalregistry/`**: Offers a global singleton registry with all converters
+- **`model/`**: Defines the core interfaces and types
 
 ## Installation
 
 ```bash
-go install github.com/dheeraj-sn/str2go/cmd/str2go@latest
+go get github.com/dheeraj-sn/str2go
 ```
 
 ## Usage
 
-### CLI Usage
+### Using the Global Registry
 
-```bash
-# Convert string to int
-str2go convert "42" --type int
-
-# Convert JSON string to struct
-str2go convert '{"name":"John","age":30}' --type "Person"
-
-# Convert string to slice
-str2go convert "1,2,3,4,5" --type "[]int" --delimiter ","
-
-# Start web server
-str2go serve --port 8080
-```
-
-### Library Usage
+The simplest way to use the library is through the global registry:
 
 ```go
 package main
 
 import (
     "fmt"
+    "reflect"
+    "github.com/dheeraj-sn/str2go/globalregistry"
+)
+
+func main() {
+    // Get a converter for int type
+    converter, exists := globalregistry.GetConverter(reflect.TypeOf(0))
+    if !exists {
+        panic("int converter not found")
+    }
+
+    // Convert string to int
+    result, err := converter("42")
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Printf("Result: %v (%T)\n", result, result)
+    // Output: Result: 42 (int)
+}
+```
+
+### Using Type Registry
+
+For more control, use the type registry directly:
+
+```go
+package main
+
+import (
+    "fmt"
+    "reflect"
+    "github.com/dheeraj-sn/str2go/typeregistry"
     "github.com/dheeraj-sn/str2go/converter"
 )
 
 func main() {
-    // Convert string to int
-    result, err := converter.Convert("42", "int")
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Result: %v (%T)\n", result, result)
+    // Create a new registry
+    registry := typeregistry.NewTypeRegistry()
 
-    // Convert JSON to struct
-    type Person struct {
-        Name string `json:"name"`
-        Age  int    `json:"age"`
-    }
-    
-    jsonStr := `{"name":"John","age":30}`
-    person, err := converter.Convert(jsonStr, "Person")
+    // Register all default converters
+    registry.RegisterAll(converter.GetConvertorMap())
+
+    // Convert string to float64
+    result, err := registry.Convert("3.14", reflect.TypeOf(0.0))
     if err != nil {
         panic(err)
     }
-    fmt.Printf("Person: %+v\n", person)
+
+    fmt.Printf("Result: %v (%T)\n", result, result)
+    // Output: Result: 3.14 (float64)
 }
 ```
 
-### Web API
+### Adding Custom Converters
 
-Start the server:
-```bash
-str2go serve --port 8080
-```
+You can easily add custom converters:
 
-API Endpoints:
-- `POST /convert` - Convert string to specified type
-- `GET /types` - List supported types
+```go
+package main
 
-Example API call:
-```bash
-curl -X POST http://localhost:8080/convert \
-  -H "Content-Type: application/json" \
-  -d '{"value": "42", "type": "int"}'
+import (
+    "fmt"
+    "reflect"
+    "strings"
+    "github.com/dheeraj-sn/str2go/typeregistry"
+)
+
+func main() {
+    registry := typeregistry.NewTypeRegistry()
+
+    // Custom converter for string to uppercase
+    uppercaseConverter := func(value string) (interface{}, error) {
+        return strings.ToUpper(value), nil
+    }
+
+    // Register the custom converter
+    registry.Register(reflect.TypeOf(""), uppercaseConverter)
+
+    // Use the converter
+    result, err := registry.Convert("hello world", reflect.TypeOf(""))
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Printf("Result: %v\n", result)
+    // Output: Result: HELLO WORLD
+}
 ```
 
 ## Supported Types
@@ -96,10 +136,76 @@ curl -X POST http://localhost:8080/convert \
 - `bool`
 - `string`
 - `time.Time`
-- `[]byte`
 
-### Complex Types
-- Structs (from JSON/YAML)
-- Slices (`[]int`, `[]string`, etc.)
-- Maps (`map[string]int`, etc.)
-- Pointers (`*int`, `*string`, etc.)
+### Pointer Types
+- `*int`, `*int8`, `*int16`, `*int32`, `*int64`
+- `*uint`, `*uint8`, `*uint16`, `*uint32`, `*uint64`
+- `*float32`, `*float64`
+- `*bool`
+- `*string`
+- `*time.Time`
+
+## API Reference
+
+### Type Registry
+
+```go
+// Create a new registry
+registry := typeregistry.NewTypeRegistry()
+
+// Register a converter
+registry.Register(targetType, converterFunc)
+
+// Register multiple converters
+registry.RegisterAll(convertersMap)
+
+// Get a converter
+converter, exists := registry.Get(targetType)
+
+// Convert a string to a type
+result, err := registry.Convert(value, targetType)
+
+// Get all supported types
+types := registry.GetSupportedTypes()
+```
+
+### Global Registry
+
+```go
+// Get a converter from global registry
+converter, exists := globalregistry.GetConverter(targetType)
+```
+
+### Converter Function Signature
+
+```go
+type ConverterFunc func(value string) (interface{}, error)
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
+go test ./...
+```
+
+Run tests with coverage:
+
+```bash
+go test -cover ./...
+```
+
+Run benchmarks:
+
+```bash
+go test -bench=. ./...
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add your changes with tests
+4. Ensure all tests pass
+5. Submit a pull request

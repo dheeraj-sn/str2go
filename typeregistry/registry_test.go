@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/dheeraj-sn/str2go/model"
 )
 
 // TestNewTypeRegistry tests the creation of a new type registry
@@ -312,5 +314,134 @@ func BenchmarkConvert(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		registry.Convert("test", stringType)
+	}
+}
+
+// TestRegisterAll tests registering multiple converters at once
+func TestRegisterAll(t *testing.T) {
+	registry := NewTypeRegistry()
+
+	// Create a map of converters to register
+	converters := map[reflect.Type]model.ConverterFunc{
+		reflect.TypeOf(""): func(value string) (interface{}, error) {
+			return "string: " + value, nil
+		},
+		reflect.TypeOf(0): func(value string) (interface{}, error) {
+			return 42, nil
+		},
+		reflect.TypeOf(0.0): func(value string) (interface{}, error) {
+			return 3.14, nil
+		},
+	}
+
+	// Register all converters at once
+	registry.RegisterAll(converters)
+
+	// Verify all converters were registered
+	if len(registry.converters) != 3 {
+		t.Fatalf("expected 3 converters, got %d", len(registry.converters))
+	}
+
+	// Test each registered converter
+	stringType := reflect.TypeOf("")
+	intType := reflect.TypeOf(0)
+	floatType := reflect.TypeOf(0.0)
+
+	// Test string converter
+	result, err := registry.Convert("test", stringType)
+	if err != nil {
+		t.Fatalf("string converter should not return error: %v", err)
+	}
+	if result != "string: test" {
+		t.Fatalf("expected 'string: test', got '%v'", result)
+	}
+
+	// Test int converter
+	result, err = registry.Convert("test", intType)
+	if err != nil {
+		t.Fatalf("int converter should not return error: %v", err)
+	}
+	if result != 42 {
+		t.Fatalf("expected 42, got %v", result)
+	}
+
+	// Test float converter
+	result, err = registry.Convert("test", floatType)
+	if err != nil {
+		t.Fatalf("float converter should not return error: %v", err)
+	}
+	if result != 3.14 {
+		t.Fatalf("expected 3.14, got %v", result)
+	}
+}
+
+// TestRegisterAllOverwrite tests that RegisterAll overwrites existing converters
+func TestRegisterAllOverwrite(t *testing.T) {
+	registry := NewTypeRegistry()
+
+	// Register initial converter
+	initialConverter := func(value string) (interface{}, error) {
+		return "initial", nil
+	}
+	registry.Register(reflect.TypeOf(""), initialConverter)
+
+	// Verify initial registration
+	if len(registry.converters) != 1 {
+		t.Fatalf("expected 1 converter after initial registration, got %d", len(registry.converters))
+	}
+
+	// Create converters map with same type but different converter
+	converters := map[reflect.Type]model.ConverterFunc{
+		reflect.TypeOf(""): func(value string) (interface{}, error) {
+			return "overwritten", nil
+		},
+		reflect.TypeOf(0): func(value string) (interface{}, error) {
+			return 100, nil
+		},
+	}
+
+	// Register all converters (should overwrite existing and add new)
+	registry.RegisterAll(converters)
+
+	// Verify we have 2 converters now
+	if len(registry.converters) != 2 {
+		t.Fatalf("expected 2 converters after RegisterAll, got %d", len(registry.converters))
+	}
+
+	// Test that the string converter was overwritten
+	result, err := registry.Convert("test", reflect.TypeOf(""))
+	if err != nil {
+		t.Fatalf("converter should not return error: %v", err)
+	}
+	if result != "overwritten" {
+		t.Fatalf("expected 'overwritten', got '%v'", result)
+	}
+
+	// Test that the new int converter works
+	result, err = registry.Convert("test", reflect.TypeOf(0))
+	if err != nil {
+		t.Fatalf("int converter should not return error: %v", err)
+	}
+	if result != 100 {
+		t.Fatalf("expected 100, got %v", result)
+	}
+}
+
+// TestRegisterAllEmptyMap tests RegisterAll with an empty map
+func TestRegisterAllEmptyMap(t *testing.T) {
+	registry := NewTypeRegistry()
+
+	// Register some initial converters
+	registry.Register(reflect.TypeOf(""), func(value string) (interface{}, error) { return value, nil })
+	registry.Register(reflect.TypeOf(0), func(value string) (interface{}, error) { return 0, nil })
+
+	initialCount := len(registry.converters)
+
+	// Register empty map
+	registry.RegisterAll(map[reflect.Type]model.ConverterFunc{})
+
+	// Should not change the count
+	if len(registry.converters) != initialCount {
+		t.Fatalf("expected %d converters after empty RegisterAll, got %d", initialCount, len(registry.converters))
 	}
 }

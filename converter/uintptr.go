@@ -3,8 +3,6 @@ package converter
 import (
 	"reflect"
 	"strconv"
-
-	"github.com/dheeraj-sn/str2go/globalregistry"
 )
 
 func init() {
@@ -14,11 +12,11 @@ func init() {
 	var uint32Var uint32
 	var uint64Var uint64
 
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&uintVar), StringToUintPtr)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&uint8Var), StringToUint8Ptr)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&uint16Var), StringToUint16Ptr)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&uint32Var), StringToUint32Ptr)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&uint64Var), StringToUint64Ptr)
+	registerConverter(reflect.TypeOf(&uintVar), StringToUintPtr)
+	registerConverter(reflect.TypeOf(&uint8Var), StringToUint8Ptr)
+	registerConverter(reflect.TypeOf(&uint16Var), StringToUint16Ptr)
+	registerConverter(reflect.TypeOf(&uint32Var), StringToUint32Ptr)
+	registerConverter(reflect.TypeOf(&uint64Var), StringToUint64Ptr)
 }
 
 func StringToUintPtr(value string) (interface{}, error) {

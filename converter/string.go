@@ -2,14 +2,12 @@ package converter
 
 import (
 	"reflect"
-
-	"github.com/dheeraj-sn/str2go/globalregistry"
 )
 
 func init() {
 	var stringVar string
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(stringVar), StringToString)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&stringVar), StringToStringPtr)
+	registerConverter(reflect.TypeOf(stringVar), StringToString)
+	registerConverter(reflect.TypeOf(&stringVar), StringToStringPtr)
 }
 
 func StringToString(value string) (interface{}, error) {

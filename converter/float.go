@@ -3,13 +3,11 @@ package converter
 import (
 	"reflect"
 	"strconv"
-
-	"github.com/dheeraj-sn/str2go/globalregistry"
 )
 
 func init() {
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(float32(0)), StringToFloat32)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(float64(0)), StringToFloat64)
+	registerConverter(reflect.TypeOf(float32(0)), StringToFloat32)
+	registerConverter(reflect.TypeOf(float64(0)), StringToFloat64)
 }
 
 func StringToFloat32(value string) (interface{}, error) {

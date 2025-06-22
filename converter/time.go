@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"reflect"
 	"time"
-
-	"github.com/dheeraj-sn/str2go/globalregistry"
 )
 
 func init() {
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(time.Time{}), StringToTime)
+	registerConverter(reflect.TypeOf(time.Time{}), StringToTime)
 }
 
 func StringToTime(value string) (interface{}, error) {

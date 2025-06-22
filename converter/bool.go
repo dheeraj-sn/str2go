@@ -3,14 +3,12 @@ package converter
 import (
 	"reflect"
 	"strconv"
-
-	"github.com/dheeraj-sn/str2go/globalregistry"
 )
 
 func init() {
 	var boolVar bool
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(false), StringToBool)
-	globalregistry.GetGlobalRegistry().Register(reflect.TypeOf(&boolVar), StringToBoolPtr)
+	registerConverter(reflect.TypeOf(false), StringToBool)
+	registerConverter(reflect.TypeOf(&boolVar), StringToBoolPtr)
 }
 
 func StringToBool(value string) (interface{}, error) {
